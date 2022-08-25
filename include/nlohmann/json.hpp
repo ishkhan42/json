@@ -375,9 +375,9 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// helper for exception-safe object creation
     template<typename T, typename... Args>
     JSON_HEDLEY_RETURNS_NON_NULL
-    static T* create(Args&& ... args)
+    static T* create(std::pmr::memory_resource* resource, Args&& ... args)
     {
-        AllocatorType<T> alloc;
+        AllocatorType<T> alloc(resource);
         using AllocatorTraits = std::allocator_traits<AllocatorType<T>>;
 
         auto deleter = [&](T * obj)
@@ -450,31 +450,31 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         /// constructor for numbers (floating-point)
         json_value(number_float_t v) noexcept : number_float(v) {}
         /// constructor for empty values of a given type
-        json_value(value_t t)
+        json_value(value_t t, std::pmr::memory_resource* resource)
         {
             switch (t)
             {
                 case value_t::object:
                 {
-                    object = create<object_t>();
+                    object = create<object_t>(resource);
                     break;
                 }
 
                 case value_t::array:
                 {
-                    array = create<array_t>();
+                    array = create<array_t>(resource);
                     break;
                 }
 
                 case value_t::string:
                 {
-                    string = create<string_t>("");
+                    string = create<string_t>(resource, "");
                     break;
                 }
 
                 case value_t::binary:
                 {
-                    binary = create<binary_t>();
+                    binary = create<binary_t>(resource);
                     break;
                 }
 
@@ -522,36 +522,36 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         }
 
         /// constructor for strings
-        json_value(const string_t& value) : string(create<string_t>(value)) {}
+        json_value(const string_t& value, std::pmr::memory_resource* resource) : string(create<string_t>(resource, value)) {}
 
         /// constructor for rvalue strings
-        json_value(string_t&& value) : string(create<string_t>(std::move(value))) {}
+        json_value(string_t&& value, std::pmr::memory_resource* resource) : string(create<string_t>(resource, std::move(value))) {}
 
         /// constructor for objects
-        json_value(const object_t& value) : object(create<object_t>(value)) {}
+        json_value(const object_t& value, std::pmr::memory_resource* resource) : object(create<object_t>(resource, value)) {}
 
         /// constructor for rvalue objects
-        json_value(object_t&& value) : object(create<object_t>(std::move(value))) {}
+        json_value(object_t&& value, std::pmr::memory_resource* resource) : object(create<object_t>(resource, std::move(value))) {}
 
         /// constructor for arrays
-        json_value(const array_t& value) : array(create<array_t>(value)) {}
+        json_value(const array_t& value, std::pmr::memory_resource* resource) : array(create<array_t>(resource, value)) {}
 
         /// constructor for rvalue arrays
-        json_value(array_t&& value) : array(create<array_t>(std::move(value))) {}
+        json_value(array_t&& value, std::pmr::memory_resource* resource) : array(create<array_t>(resource, std::move(value))) {}
 
         /// constructor for binary arrays
-        json_value(const typename binary_t::container_type& value) : binary(create<binary_t>(value)) {}
+        json_value(const typename binary_t::container_type& value, std::pmr::memory_resource* resource) : binary(create<binary_t>(resource, value)) {}
 
         /// constructor for rvalue binary arrays
-        json_value(typename binary_t::container_type&& value) : binary(create<binary_t>(std::move(value))) {}
+        json_value(typename binary_t::container_type&& value, std::pmr::memory_resource* resource) : binary(create<binary_t>(resource, std::move(value))) {}
 
         /// constructor for binary arrays (internal type)
-        json_value(const binary_t& value) : binary(create<binary_t>(value)) {}
+        json_value(const binary_t& value, std::pmr::memory_resource* resource) : binary(create<binary_t>(resource, value)) {}
 
         /// constructor for rvalue binary arrays (internal type)
-        json_value(binary_t&& value) : binary(create<binary_t>(std::move(value))) {}
+        json_value(binary_t&& value, std::pmr::memory_resource* resource) : binary(create<binary_t>(resource, std::move(value))) {}
 
-        void destroy(value_t t)
+        void destroy(value_t t, std::pmr::memory_resource* resource)
         {
             if (t == value_t::array || t == value_t::object)
             {
@@ -606,7 +606,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
             {
                 case value_t::object:
                 {
-                    AllocatorType<object_t> alloc;
+                    AllocatorType<object_t> alloc(resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, object);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, object, 1);
                     break;
@@ -614,7 +614,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
                 case value_t::array:
                 {
-                    AllocatorType<array_t> alloc;
+                    AllocatorType<array_t> alloc(resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, array);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, array, 1);
                     break;
@@ -622,7 +622,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
                 case value_t::string:
                 {
-                    AllocatorType<string_t> alloc;
+                    AllocatorType<string_t> alloc(resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, string);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, string, 1);
                     break;
@@ -630,7 +630,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
                 case value_t::binary:
                 {
-                    AllocatorType<binary_t> alloc;
+                    AllocatorType<binary_t> alloc(resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, binary);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, binary, 1);
                     break;
@@ -802,16 +802,16 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
     /// @brief create an empty value with a given type
     /// @sa https://json.nlohmann.me/api/basic_json/basic_json/
-    basic_json(const value_t v)
-        : m_type(v), m_value(v)
+    basic_json(const value_t v, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
+        : m_type(v), m_value(v, resource), m_mem_resource(resource)
     {
         assert_invariant();
     }
 
     /// @brief create a null object
     /// @sa https://json.nlohmann.me/api/basic_json/basic_json/
-    basic_json(std::nullptr_t = nullptr) noexcept // NOLINT(bugprone-exception-escape)
-        : basic_json(value_t::null)
+    basic_json(std::nullptr_t = nullptr, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) noexcept // NOLINT(bugprone-exception-escape)
+        : basic_json(value_t::null, resource)
     {
         assert_invariant();
     }
@@ -822,10 +822,11 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
                typename U = detail::uncvref_t<CompatibleType>,
                detail::enable_if_t <
                    !detail::is_basic_json<U>::value && detail::is_compatible_type<basic_json_t, U>::value, int > = 0 >
-    basic_json(CompatibleType && val) noexcept(noexcept( // NOLINT(bugprone-forwarding-reference-overload,bugprone-exception-escape)
+    basic_json(CompatibleType && val, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) noexcept(noexcept( // NOLINT(bugprone-forwarding-reference-overload,bugprone-exception-escape)
                 JSONSerializer<U>::to_json(std::declval<basic_json_t&>(),
                                            std::forward<CompatibleType>(val))))
     {
+        m_mem_resource = resource;
         JSONSerializer<U>::to_json(*this, std::forward<CompatibleType>(val));
         set_parents();
         assert_invariant();
@@ -836,8 +837,9 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     template < typename BasicJsonType,
                detail::enable_if_t <
                    detail::is_basic_json<BasicJsonType>::value&& !std::is_same<basic_json, BasicJsonType>::value, int > = 0 >
-    basic_json(const BasicJsonType& val)
+    basic_json(const BasicJsonType& val, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
+        m_mem_resource = resource;
         using other_boolean_t = typename BasicJsonType::boolean_t;
         using other_number_float_t = typename BasicJsonType::number_float_t;
         using other_number_integer_t = typename BasicJsonType::number_integer_t;
@@ -891,8 +893,10 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// @sa https://json.nlohmann.me/api/basic_json/basic_json/
     basic_json(initializer_list_t init,
                bool type_deduction = true,
-               value_t manual_type = value_t::array)
+               value_t manual_type = value_t::array,
+               std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
+        m_mem_resource = resource;
         // check if each element is an array with two elements whose first
         // element is a string
         bool is_an_object = std::all_of(init.begin(), init.end(),
@@ -921,7 +925,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         {
             // the initializer list is a list of pairs -> create object
             m_type = value_t::object;
-            m_value = value_t::object;
+            m_value = json_value(value_t::object, m_mem_resource);
 
             for (auto& element_ref : init)
             {
@@ -935,7 +939,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         {
             // the initializer list describes an array -> create array
             m_type = value_t::array;
-            m_value.array = create<array_t>(init.begin(), init.end());
+            m_value.array = create<array_t>(m_mem_resource, init.begin(), init.end());
         }
 
         set_parents();
@@ -945,9 +949,9 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// @brief explicitly create a binary array (without subtype)
     /// @sa https://json.nlohmann.me/api/basic_json/binary/
     JSON_HEDLEY_WARN_UNUSED_RESULT
-    static basic_json binary(const typename binary_t::container_type& init)
+    static basic_json binary(const typename binary_t::container_type& init, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
-        auto res = basic_json();
+        auto res = basic_json(resource);
         res.m_type = value_t::binary;
         res.m_value = init;
         return res;
@@ -956,9 +960,9 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// @brief explicitly create a binary array (with subtype)
     /// @sa https://json.nlohmann.me/api/basic_json/binary/
     JSON_HEDLEY_WARN_UNUSED_RESULT
-    static basic_json binary(const typename binary_t::container_type& init, typename binary_t::subtype_type subtype)
+    static basic_json binary(const typename binary_t::container_type& init, typename binary_t::subtype_type subtype, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
-        auto res = basic_json();
+        auto res = basic_json(resource);
         res.m_type = value_t::binary;
         res.m_value = binary_t(init, subtype);
         return res;
@@ -967,20 +971,20 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// @brief explicitly create a binary array
     /// @sa https://json.nlohmann.me/api/basic_json/binary/
     JSON_HEDLEY_WARN_UNUSED_RESULT
-    static basic_json binary(typename binary_t::container_type&& init)
+    static basic_json binary(typename binary_t::container_type&& init, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
-        auto res = basic_json();
+        auto res = basic_json(nullptr, resource);
         res.m_type = value_t::binary;
-        res.m_value = std::move(init);
+        res.m_value = json_value(std::move(init), resource);
         return res;
     }
 
     /// @brief explicitly create a binary array (with subtype)
     /// @sa https://json.nlohmann.me/api/basic_json/binary/
     JSON_HEDLEY_WARN_UNUSED_RESULT
-    static basic_json binary(typename binary_t::container_type&& init, typename binary_t::subtype_type subtype)
+    static basic_json binary(typename binary_t::container_type&& init, typename binary_t::subtype_type subtype, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
-        auto res = basic_json();
+        auto res = basic_json(resource);
         res.m_type = value_t::binary;
         res.m_value = binary_t(std::move(init), subtype);
         return res;
@@ -989,25 +993,25 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// @brief explicitly create an array from an initializer list
     /// @sa https://json.nlohmann.me/api/basic_json/array/
     JSON_HEDLEY_WARN_UNUSED_RESULT
-    static basic_json array(initializer_list_t init = {})
+    static basic_json array(initializer_list_t init = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
-        return basic_json(init, false, value_t::array);
+        return basic_json(init, false, value_t::array, resource);
     }
 
     /// @brief explicitly create an object from an initializer list
     /// @sa https://json.nlohmann.me/api/basic_json/object/
     JSON_HEDLEY_WARN_UNUSED_RESULT
-    static basic_json object(initializer_list_t init = {})
+    static basic_json object(initializer_list_t init = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
     {
-        return basic_json(init, false, value_t::object);
+        return basic_json(init, false, value_t::object, resource);
     }
 
     /// @brief construct an array with count copies of given value
     /// @sa https://json.nlohmann.me/api/basic_json/basic_json/
-    basic_json(size_type cnt, const basic_json& val)
-        : m_type(value_t::array)
+    basic_json(size_type cnt, const basic_json& val, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
+        : m_type(value_t::array), m_value(), m_mem_resource(resource)
     {
-        m_value.array = create<array_t>(cnt, val);
+        m_value.array = create<array_t>(resource, cnt, val);
         set_parents();
         assert_invariant();
     }
@@ -1017,7 +1021,8 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     template < class InputIT, typename std::enable_if <
                    std::is_same<InputIT, typename basic_json_t::iterator>::value ||
                    std::is_same<InputIT, typename basic_json_t::const_iterator>::value, int >::type = 0 >
-    basic_json(InputIT first, InputIT last)
+    basic_json(InputIT first, InputIT last, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) 
+        : m_type(value_t::null), m_value(), m_mem_resource(resource)
     {
         JSON_ASSERT(first.m_object != nullptr);
         JSON_ASSERT(last.m_object != nullptr);
@@ -1091,14 +1096,14 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
             case value_t::object:
             {
-                m_value.object = create<object_t>(first.m_it.object_iterator,
+                m_value.object = create<object_t>(m_mem_resource, first.m_it.object_iterator,
                                                   last.m_it.object_iterator);
                 break;
             }
 
             case value_t::array:
             {
-                m_value.array = create<array_t>(first.m_it.array_iterator,
+                m_value.array = create<array_t>(m_mem_resource, first.m_it.array_iterator,
                                                 last.m_it.array_iterator);
                 break;
             }
@@ -1127,12 +1132,12 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     template<typename JsonRef,
              detail::enable_if_t<detail::conjunction<detail::is_json_ref<JsonRef>,
                                  std::is_same<typename JsonRef::value_type, basic_json>>::value, int> = 0 >
-    basic_json(const JsonRef& ref) : basic_json(ref.moved_or_copied()) {}
+    basic_json(const JsonRef& ref, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) : basic_json(ref.moved_or_copied(), resource) {}
 
     /// @brief copy constructor
     /// @sa https://json.nlohmann.me/api/basic_json/basic_json/
-    basic_json(const basic_json& other)
-        : m_type(other.m_type)
+    basic_json(const basic_json& other, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
+        : m_type(other.m_type), m_value(), m_mem_resource(resource)
     {
         // check of passed value is valid
         other.assert_invariant();
@@ -1141,19 +1146,19 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         {
             case value_t::object:
             {
-                m_value = *other.m_value.object;
+                m_value = json_value(*other.m_value.object, resource);
                 break;
             }
 
             case value_t::array:
             {
-                m_value = *other.m_value.array;
+                m_value = json_value(*other.m_value.array, resource);
                 break;
             }
 
             case value_t::string:
             {
-                m_value = *other.m_value.string;
+                m_value = json_value(*other.m_value.string, resource);
                 break;
             }
 
@@ -1183,7 +1188,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
             case value_t::binary:
             {
-                m_value = *other.m_value.binary;
+                m_value = json_value(*other.m_value.binary, resource);
                 break;
             }
 
@@ -1201,7 +1206,8 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     /// @sa https://json.nlohmann.me/api/basic_json/basic_json/
     basic_json(basic_json&& other) noexcept
         : m_type(std::move(other.m_type)),
-          m_value(std::move(other.m_value))
+          m_value(std::move(other.m_value)),
+          m_mem_resource(std::move(other.m_mem_resource))
     {
         // check that passed value is valid
         other.assert_invariant(false);
@@ -1229,6 +1235,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         using std::swap;
         swap(m_type, other.m_type);
         swap(m_value, other.m_value);
+        swap(m_mem_resource, other.m_mem_resource);
 
         set_parents();
         assert_invariant();
@@ -1240,7 +1247,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     ~basic_json() noexcept
     {
         assert_invariant(false);
-        m_value.destroy(m_type);
+        m_value.destroy(m_type, m_mem_resource);
     }
 
     /// @}
@@ -2051,7 +2058,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         if (is_null())
         {
             m_type = value_t::array;
-            m_value.array = create<array_t>();
+            m_value.array = create<array_t>(m_mem_resource);
             assert_invariant();
         }
 
@@ -2110,7 +2117,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         if (is_null())
         {
             m_type = value_t::object;
-            m_value.object = create<object_t>();
+            m_value.object = create<object_t>(m_mem_resource);
             assert_invariant();
         }
 
@@ -2163,7 +2170,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         if (is_null())
         {
             m_type = value_t::object;
-            m_value.object = create<object_t>();
+            m_value.object = create<object_t>(m_mem_resource);
             assert_invariant();
         }
 
@@ -2440,14 +2447,14 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
                 if (is_string())
                 {
-                    AllocatorType<string_t> alloc;
+                    AllocatorType<string_t> alloc(m_mem_resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, m_value.string);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, m_value.string, 1);
                     m_value.string = nullptr;
                 }
                 else if (is_binary())
                 {
-                    AllocatorType<binary_t> alloc;
+                    AllocatorType<binary_t> alloc(m_mem_resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, m_value.binary);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, m_value.binary, 1);
                     m_value.binary = nullptr;
@@ -2511,14 +2518,14 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
                 if (is_string())
                 {
-                    AllocatorType<string_t> alloc;
+                    AllocatorType<string_t> alloc(m_mem_resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, m_value.string);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, m_value.string, 1);
                     m_value.string = nullptr;
                 }
                 else if (is_binary())
                 {
-                    AllocatorType<binary_t> alloc;
+                    AllocatorType<binary_t> alloc(m_mem_resource);
                     std::allocator_traits<decltype(alloc)>::destroy(alloc, m_value.binary);
                     std::allocator_traits<decltype(alloc)>::deallocate(alloc, m_value.binary, 1);
                     m_value.binary = nullptr;
@@ -3122,7 +3129,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         if (is_null())
         {
             m_type = value_t::array;
-            m_value = value_t::array;
+            m_value = json_value(value_t::array, m_mem_resource);
             assert_invariant();
         }
 
@@ -3183,7 +3190,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         }
         else
         {
-            push_back(basic_json(init));
+            push_back(basic_json(init, m_mem_resource));
         }
     }
 
@@ -3235,7 +3242,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         if (is_null())
         {
             m_type = value_t::object;
-            m_value = value_t::object;
+            m_value = json_value(value_t::object, m_mem_resource);
             assert_invariant();
         }
 
@@ -3410,7 +3417,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         if (is_null())
         {
             m_type = value_t::object;
-            m_value.object = create<object_t>();
+            m_value.object = create<object_t>(m_mem_resource);
             assert_invariant();
         }
 
@@ -3690,7 +3697,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     requires std::is_scalar_v<ScalarType>
     bool operator==(ScalarType rhs) const noexcept
     {
-        return *this == basic_json(rhs);
+        return *this == basic_json(rhs, m_mem_resource);
     }
 
     /// @brief comparison: not equal
@@ -3723,7 +3730,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     requires std::is_scalar_v<ScalarType>
     std::partial_ordering operator<=>(ScalarType rhs) const noexcept // *NOPAD*
     {
-        return *this <=> basic_json(rhs); // *NOPAD*
+        return *this <=> basic_json(rhs, m_mem_resource); // *NOPAD*
     }
 
 #if JSON_USE_LEGACY_DISCARDED_VALUE_COMPARISON
@@ -3748,7 +3755,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     requires std::is_scalar_v<ScalarType>
     bool operator<=(ScalarType rhs) const noexcept
     {
-        return *this <= basic_json(rhs);
+        return *this <= basic_json(rhs, m_mem_resource);
     }
 
     /// @brief comparison: greater than or equal
@@ -3769,7 +3776,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     requires std::is_scalar_v<ScalarType>
     bool operator>=(ScalarType rhs) const noexcept
     {
-        return *this >= basic_json(rhs);
+        return *this >= basic_json(rhs, m_mem_resource);
     }
 #endif
 #else
@@ -4185,6 +4192,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
     /// the value of the current element
     json_value m_value = {};
+    std::pmr::memory_resource* m_mem_resource = std::pmr::get_default_resource();
 
 #if JSON_DIAGNOSTICS
     /// a pointer to a parent value (for debugging purposes)
@@ -5094,7 +5102,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         {
             if (!is_object())
             {
-                *this = object();
+                *this = object({}, apply_patch.m_mem_resource);
             }
             for (auto it = apply_patch.begin(); it != apply_patch.end(); ++it)
             {
